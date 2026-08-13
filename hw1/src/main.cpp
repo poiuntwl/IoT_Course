@@ -1,17 +1,53 @@
 ﻿#include <Arduino.h>
-#define LED 2
-#define EXT_LED 4
 
-void setup() {
-    Serial.begin(115200);
-    pinMode(LED, OUTPUT);
-    pinMode(EXT_LED, OUTPUT);
+const int LedPin = 4;
+const int DotDurationMs = 200;
+const int DashDurationMs = 600;
+
+void SendSymbol(char symbol)
+{
+    Serial.print(symbol);
+
+    digitalWrite(LedPin, HIGH);
+
+    if (symbol == '.')
+    {
+        delay(DotDurationMs);
+    }
+    else
+    {
+        delay(DashDurationMs);
+    }
+
+    digitalWrite(LedPin, LOW);
 }
 
-void loop() {
-    Serial.println("Hello world");
-    digitalWrite(EXT_LED, HIGH);
-    delay(100);
-    digitalWrite(EXT_LED, LOW);
-    delay(100);
+void SendLetter(const char* code)
+{
+    for (int i = 0; code[i] != '\0'; i++)
+    {
+        SendSymbol(code[i]);
+
+        if (code[i + 1] != '\0')
+        {
+            delay(DotDurationMs);
+        }
+    }
+
+    delay(DotDurationMs * 3);
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    pinMode(LedPin, OUTPUT);
+}
+
+void loop()
+{
+    SendLetter("...");
+    SendLetter("---");
+    SendLetter("...");
+
+    Serial.println();
 }

@@ -9,11 +9,32 @@
             "top": 0,
             "left": 0,
             "attrs": {}
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "resistor1",
+            "top": 30,
+            "left": 220,
+            "attrs": {
+                "value": "220"
+            }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led1",
+            "top": 25,
+            "left": 300,
+            "attrs": {
+                "color": "blue"
+            }
         }
     ],
     "connections": [
         ["esp:TX", "$serialMonitor:RX", "", []],
-        ["esp:RX", "$serialMonitor:TX", "", []]
+        ["esp:RX", "$serialMonitor:TX", "", []],
+        ["esp:4", "resistor1:1", "green", []],
+        ["resistor1:2", "led1:A", "green", []],
+        ["led1:C", "esp:GND.1", "black", []]
     ],
     "dependencies": {}
 }
