@@ -27,6 +27,7 @@ static ulong lastLogTime = 0;
 static ulong lastHeapLogTime = 0;
 static ulong launchTime = millis();
 static SensorData sd;
+static uint8_t heapLogCount = 0;
 
 void loop() {
     const unsigned long now = millis();
@@ -41,11 +42,11 @@ void loop() {
         log_data();
     }
 
-    if (now - lastHeapLogTime >= 60000) {
+    if (now - lastHeapLogTime >= 60000 && heapLogCount < 5) {
         lastHeapLogTime = now;
-        if (now - launchTime <= 5 * 60 * 1000) {
-            Serial.printf("free heap: %u bytes\r\n", ESP.getFreeHeap());
-        }
+        heapLogCount++;
+
+        Serial.printf("free heap: %u bytes\r\n", ESP.getFreeHeap());
     }
 }
 
