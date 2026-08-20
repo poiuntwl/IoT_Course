@@ -25,7 +25,8 @@ void loop() {
     char buffer[64];
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localtime(&sd.timestamp));
 
-    Serial.printf("temperature: %uC\thumidity: %u%\tdatetime: %s\n", sd.temperature, sd.humidity, buffer);
+    Serial.printf("temperature: %uC\thumidity: %u%\tdatetime: %s\r\n", sd.temperature, sd.humidity, buffer);
+    delay(1000);
 }
 
 static uint8_t random_uint8_t(const uint8_t min, const uint8_t max) {
