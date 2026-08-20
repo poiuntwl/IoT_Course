@@ -17,6 +17,7 @@ static tm bootDate = {
     .tm_sec = 0, .tm_min = 30, .tm_hour = 19, .tm_mday = 20, .tm_mon = 8 - 1, .tm_year = 2026 - 1900, .tm_wday = 0,
     .tm_yday = 0, .tm_isdst = 0
 };
+static time_t bootTimestamp = mktime(&bootDate);
 
 void setup() {
     Serial.begin(115200);
@@ -34,7 +35,7 @@ void loop() {
         sd = {
             .temperature = random_uint8_t(15, 30),
             .humidity = random_uint8_t(30, 65),
-            .currentDate = mktime(&bootDate) + static_cast<time_t>(millis() / 1000)
+            .currentDate = bootTimestamp + static_cast<time_t>(millis() / 1000)
         };
 
         log_data();
