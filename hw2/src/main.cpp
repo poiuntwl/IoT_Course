@@ -61,5 +61,5 @@ static void log_data() {
     char buffer[64];
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localtime(&sd.currentDate));
 
-    Serial.printf("temperature: %uC\thumidity: %u\tdatetime: %s\r\n", sd.temperature, sd.humidity, buffer);
+    Serial.printf("temperature: %uC\thumidity: %u%%\tdatetime: %s\r\n", sd.temperature, sd.humidity, buffer);
 }
