@@ -32,7 +32,9 @@ void loop() {
         };
 
         log_data(sd);
+    }
 
+    if (now - lastLogTime >= 60000) {
         if (now - launchTime <= 5 * 60 * 1000) {
             Serial.printf("%u\r\n", ESP.getFreeHeap());
         }
