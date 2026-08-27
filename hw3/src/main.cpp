@@ -24,20 +24,40 @@
 
 #define BUTTON_PIN 4
 
+static bool btnLastRawState;
+static bool btnStableState;
+static ulong btnLastChangeTime;
+
+static bool isBtnPressed();
+
 void setup() {
     Serial.begin(115200);
 
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+    btnLastRawState = digitalRead(BUTTON_PIN);
+    btnStableState = btnLastRawState;
 }
 
 void loop() {
-    bool pressed = digitalRead(BUTTON_PIN) == LOW;
-
-    if (pressed) {
+    bool btnPressed = isBtnPressed();
+    if (btnPressed) {
         Serial.println("Pressed");
     } else {
         Serial.println("Not Pressed");
     }
+}
 
-    delay(100);
+bool isBtnPressed() {
+    const bool btnRaw = digitalRead(BUTTON_PIN);
+    if (btnRaw != btnLastRawState) {
+        btnLastRawState = btnRaw;
+        btnLastChangeTime = millis();
+    }
+
+    if (millis() - btnLastChangeTime >= 20) {
+        btnStableState = btnRaw;
+    }
+
+    return btnStableState == LOW;
 }

@@ -9,7 +9,7 @@
             "id": "btn1",
             "top": 44.6,
             "left": 172.8,
-            "attrs": { "color": "green", "xray": "1", "key": " ", "bounce": "0" }
+            "attrs": { "color": "green", "xray": "1", "key": " ", "bounce": "1" }
         },
         { "type": "wokwi-photoresistor-sensor", "id": "ldr1", "top": 128, "left": 164, "attrs": {} },
         { "type": "wokwi-dht22", "id": "dht1", "top": -134.1, "left": 292.2, "attrs": {} },
