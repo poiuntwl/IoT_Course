@@ -12,11 +12,11 @@
 /// BUTTON:
 /// switches between SILENCE and MONITOR
 /// uses debounce
-/// MONITOR: read each 5s: temperature, humidity, brightness
+/// MONITOR: read each 5s: temperature, humidity, LDR raw ADC
 /// output: serial monitor (TX)
 ///
 /// LED:
-/// if brightness < threshold: turn on
+/// if ldrRaw >= threshold: turn on
 ///
 /// WEB:
 /// each 30s: POST httpbin.org/post (or locally set up server)
@@ -47,7 +47,7 @@ static bool btnPrevPressed = false;
 static DHT dht(DHT22_PIN, DHT22);
 static ulong lastSensorReadTimestamp;
 static ulong lastSensorPublishTimestamp;
-static int brightness;
+static int ldrRaw;
 static float temperature;
 static float humidity;
 static ulong lastWifiAttemptTimestamp;
@@ -66,7 +66,7 @@ static bool isBtnClicked(bool currentState);
 
 static bool catchReadStateChange();
 
-static void lightLed(int brightness);
+static void lightLed(int ldrRaw);
 
 static void printSensors();
 
@@ -100,8 +100,8 @@ void loop() {
     }
 
     if (readState == MONITOR && now - lastSensorReadTimestamp >= SENSOR_PRINT_INTERVAL) {
-        brightness = analogRead(LDR_PIN);
-        lightLed(brightness);
+        ldrRaw = analogRead(LDR_PIN);
+        lightLed(ldrRaw);
 
         temperature = dht.readTemperature();
         humidity = dht.readHumidity();
@@ -157,8 +157,8 @@ static bool catchReadStateChange() {
     return changed;
 }
 
-void lightLed(int brightness) {
-    if (brightness >= LIGHT_THRESHOLD) {
+void lightLed(int ldrRaw) {
+    if (ldrRaw >= LIGHT_THRESHOLD) {
         digitalWrite(LED_PIN, HIGH);
     } else {
         digitalWrite(LED_PIN, LOW);
@@ -167,10 +167,10 @@ void lightLed(int brightness) {
 
 void printSensors() {
     Serial.printf(
-        "Temp: %.1f C, Humidity: %.1f %%, Brightness (reversed): %d\r\n",
+        "Temp: %.1f C, Humidity: %.1f %%, LDR raw ADC: %d\r\n",
         temperature,
         humidity,
-        brightness
+        ldrRaw
     );
 }
 
@@ -234,10 +234,10 @@ void publish() {
     snprintf(
         payload,
         sizeof(payload),
-        R"({"temperature":%s,"humidity":%s,"brightness":%d})",
+        R"({"temperature":%s,"humidity":%s,"ldrRaw":%d})",
         temperatureJson,
         humidityJson,
-        brightness
+        ldrRaw
     );
 
     HTTPClient http;
