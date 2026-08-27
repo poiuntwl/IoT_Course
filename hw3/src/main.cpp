@@ -173,7 +173,7 @@ void connectWifi() {
 
 void maintainWifi() {
     const ulong now = millis();
-    const bool wifiConnected = WiFiClass::status() == WL_CONNECTED;
+    const bool wifiConnected = WiFi.status() == WL_CONNECTED;
 
     if (wifiConnected) {
         if (!wifiWasConnected) {
@@ -203,7 +203,7 @@ void maintainWifi() {
 }
 
 void publish() {
-    if (WiFiClass::status() != WL_CONNECTED) {
+    if (WiFi.status() != WL_CONNECTED) {
         Serial.println("HTTP POST error: Wi-Fi unavailable");
         return;
     }
