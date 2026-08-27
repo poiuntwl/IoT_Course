@@ -50,6 +50,9 @@ static ulong lastSensorPublishTimestamp;
 static int brightness;
 static float temperature;
 static float humidity;
+static ulong lastWifiAttemptTimestamp;
+static bool wifiWasConnected;
+static bool wifiUnavailableReported;
 
 static const char *WIFI_SSID = "Wokwi-GUEST";
 static const char *WIFI_PASSWORD = "";
@@ -65,7 +68,9 @@ static void lightLed(int brightness);
 
 static void printSensors();
 
-static bool connectWifi();
+static void connectWifi();
+
+static void maintainWifi();
 
 static void publish();
 
@@ -84,6 +89,8 @@ void setup() {
 }
 
 void loop() {
+    maintainWifi();
+
     const ulong now = millis();
     // start countdown whenever we start monitoring
     if (catchReadStateChange()) {
@@ -91,7 +98,7 @@ void loop() {
         lastSensorPublishTimestamp = now;
     }
 
-    if (now - lastSensorReadTimestamp >= SENSOR_PRINT_INTERVAL) {
+    if (readState == MONITOR && now - lastSensorReadTimestamp >= SENSOR_PRINT_INTERVAL) {
         brightness = analogRead(LDR_PIN);
         lightLed(brightness);
 
@@ -105,7 +112,7 @@ void loop() {
         }
     }
 
-    if (now - lastSensorPublishTimestamp >= SENSOR_PUBLISH_INTERVAL) {
+    if (readState == MONITOR && now - lastSensorPublishTimestamp >= SENSOR_PUBLISH_INTERVAL) {
         lastSensorPublishTimestamp = now;
 
         publish();
@@ -159,32 +166,41 @@ void printSensors() {
     );
 }
 
-bool connectWifi() {
-    Serial.print("Connecting to Wi-Fi");
-
+void connectWifi() {
+    Serial.println("Connecting to Wi-Fi");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    lastWifiAttemptTimestamp = millis();
+}
 
-    ulong startedAt = millis();
+void maintainWifi() {
+    const ulong now = millis();
+    const bool wifiConnected = WiFiClass::status() == WL_CONNECTED;
 
-    while (
-        WiFiClass::status() != WL_CONNECTED &&
-        millis() - startedAt < 10000
-    ) {
-        delay(250);
-        Serial.print(".");
+    if (wifiConnected) {
+        if (!wifiWasConnected) {
+            Serial.printf(
+                "Wi-Fi connected. IP: %s\n",
+                WiFi.localIP().toString().c_str()
+            );
+        }
+        wifiWasConnected = true;
+        wifiUnavailableReported = false;
+        return;
     }
 
-    if (WiFiClass::status() != WL_CONNECTED) {
-        Serial.println("\nWi-Fi unavailable");
-        return false;
+    if (wifiWasConnected) {
+        Serial.println("Wi-Fi disconnected");
+    } else if (!wifiUnavailableReported) {
+        Serial.println("Wi-Fi unavailable");
     }
+    wifiWasConnected = false;
+    wifiUnavailableReported = true;
 
-    Serial.printf(
-        "\nWi-Fi connected. IP: %s\n",
-        WiFi.localIP().toString().c_str()
-    );
-
-    return true;
+    if (now - lastWifiAttemptTimestamp >= WIFI_RECHECK_INTERVAL) {
+        Serial.println("Wi-Fi unavailable; retrying connection");
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+        lastWifiAttemptTimestamp = now;
+    }
 }
 
 void publish() {
