@@ -104,6 +104,13 @@ void loop() {
         temperature = dht.readTemperature();
         humidity = dht.readHumidity();
 
+        if (isnan(temperature)) {
+            Serial.println("DHT22 temperature reading failed: NaN");
+        }
+        if (isnan(humidity)) {
+            Serial.println("DHT22 humidity reading failed: NaN");
+        }
+
         lastSensorReadTimestamp = now;
 
         if (readState == MONITOR) {
