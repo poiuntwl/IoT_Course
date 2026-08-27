@@ -7,11 +7,11 @@
         {
             "type": "wokwi-pushbutton",
             "id": "btn1",
-            "top": 44.6,
-            "left": 172.8,
+            "top": -32.2,
+            "left": 163.2,
             "attrs": { "color": "green", "xray": "1", "key": " ", "bounce": "1" }
         },
-        { "type": "wokwi-photoresistor-sensor", "id": "ldr1", "top": 128, "left": 164, "attrs": {} },
+        { "type": "wokwi-photoresistor-sensor", "id": "ldr1", "top": 128, "left": 173.6, "attrs": {} },
         { "type": "wokwi-dht22", "id": "dht1", "top": -134.1, "left": 292.2, "attrs": {} },
         {
             "type": "wokwi-led",
@@ -19,13 +19,23 @@
             "top": -109.2,
             "left": 109.4,
             "attrs": { "color": "red" }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r1",
+            "top": 80.75,
+            "left": 249.6,
+            "attrs": { "value": "1000" }
         }
     ],
     "connections": [
         [ "esp:TX", "$serialMonitor:RX", "", [] ],
         [ "esp:RX", "$serialMonitor:TX", "", [] ],
-        [ "esp:GND.3", "btn1:2.l", "black", [ "h0" ] ],
-        [ "btn1:1.l", "esp:4", "green", [ "h-48", "v86.4" ] ]
+        [ "btn1:1.l", "esp:4", "green", [ "h-48", "v86.4" ] ],
+        [ "ldr1:GND", "r1:2", "black", [ "h19.2", "v-67.6" ] ],
+        [ "r1:1", "esp:GND.3", "black", [ "h-153.6" ] ],
+        [ "btn1:2.l", "esp:GND.3", "black", [ "h-28.8", "v86.6" ] ],
+        [ "esp:34", "ldr1:AO", "green", [ "h-9.45", "v192", "h355.2", "v-85.7" ] ]
     ],
     "dependencies": {}
 }
