@@ -24,6 +24,8 @@
 
 #define BUTTON_PIN 4
 #define LDR_PIN 34
+#define LED_PIN 26
+#define LIGHT_THRESHOLD 100
 
 namespace {
     enum READ_STATE { SILENCE, MONITOR };
@@ -34,7 +36,7 @@ static bool btnStableState;
 static ulong btnLastChangeTime;
 static READ_STATE readState = SILENCE;
 static bool btnPrevPressed = false;
-static bool lastSensorReadTimestamp;
+static ulong lastSensorReadTimestamp;
 
 static bool isBtnPressed();
 
@@ -48,6 +50,7 @@ void setup() {
     Serial.begin(115200);
 
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(LED_PIN, OUTPUT);
 
     btnLastRawState = digitalRead(BUTTON_PIN);
     btnStableState = btnLastRawState;
@@ -56,8 +59,12 @@ void setup() {
 void loop() {
     catchReadStateChange();
 
-    if (readState == MONITOR && lastSensorReadTimestamp - millis() > 5000) {
+    if (millis() - lastSensorReadTimestamp > 1000) {
         lastSensorReadTimestamp = millis();
+
+        if (readState == MONITOR) {
+            // send
+        }
 
         int brightness = analogRead(LDR_PIN);
         lightLed(brightness);
@@ -91,5 +98,10 @@ static void catchReadStateChange() {
 }
 
 void lightLed(int brightness) {
-    
+    Serial.println(brightness);
+    if (brightness >= LIGHT_THRESHOLD) {
+        digitalWrite(LED_PIN, HIGH);
+    } else {
+        digitalWrite(LED_PIN, LOW);
+    }
 }
