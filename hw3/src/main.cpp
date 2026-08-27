@@ -23,6 +23,7 @@
 /// sensor errors: output message, continue
 
 #define BUTTON_PIN 4
+#define LDR_PIN 34
 
 namespace {
     enum READ_STATE { SILENCE, MONITOR };
@@ -33,12 +34,15 @@ static bool btnStableState;
 static ulong btnLastChangeTime;
 static READ_STATE readState = SILENCE;
 static bool btnPrevPressed = false;
+static bool lastSensorReadTimestamp;
 
 static bool isBtnPressed();
 
 static bool isBtnClicked(bool currentState);
 
 static void catchReadStateChange();
+
+static void lightLed(int brightness);
 
 void setup() {
     Serial.begin(115200);
@@ -52,7 +56,12 @@ void setup() {
 void loop() {
     catchReadStateChange();
 
-    Serial.println(readState);
+    if (readState == MONITOR && lastSensorReadTimestamp - millis() > 5000) {
+        lastSensorReadTimestamp = millis();
+
+        int brightness = analogRead(LDR_PIN);
+        lightLed(brightness);
+    }
 }
 
 bool isBtnPressed() {
@@ -79,4 +88,8 @@ static void catchReadStateChange() {
         readState = readState == SILENCE ? MONITOR : SILENCE;
     }
     btnPrevPressed = btnPressed;
+}
+
+void lightLed(int brightness) {
+    
 }

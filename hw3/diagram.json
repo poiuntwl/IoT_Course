@@ -19,21 +19,14 @@
             "top": -109.2,
             "left": 109.4,
             "attrs": { "color": "red" }
-        },
-        {
-            "type": "wokwi-resistor",
-            "id": "r1",
-            "top": 80.75,
-            "left": 249.6,
-            "attrs": { "value": "1000" }
         }
     ],
     "connections": [
         [ "esp:TX", "$serialMonitor:RX", "", [] ],
         [ "esp:RX", "$serialMonitor:TX", "", [] ],
         [ "btn1:1.l", "esp:4", "green", [ "h-48", "v86.4" ] ],
-        [ "ldr1:GND", "r1:2", "black", [ "h19.2", "v-67.6" ] ],
-        [ "r1:1", "esp:GND.3", "black", [ "h-153.6" ] ],
+        [ "ldr1:VCC", "esp:3V3", "red", [ "h19.2", "v96", "h-412.8", "v-211.2" ] ],
+        [ "ldr1:GND", "esp:GND.3", "black", [ "h19.2", "v-67.6", "h-268.8" ] ],
         [ "btn1:2.l", "esp:GND.3", "black", [ "h-28.8", "v86.6" ] ],
         [ "esp:34", "ldr1:AO", "green", [ "h-9.45", "v192", "h355.2", "v-85.7" ] ]
     ],
