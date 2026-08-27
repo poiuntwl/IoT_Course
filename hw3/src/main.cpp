@@ -57,6 +57,8 @@ static bool wifiUnavailableReported;
 static const char *WIFI_SSID = "Wokwi-GUEST";
 static const char *WIFI_PASSWORD = "";
 static const char *HTTP_URL = "http://httpbin.org/post";
+static constexpr uint16_t HTTP_CONNECT_TIMEOUT_MS = 5000;
+static constexpr uint16_t HTTP_TCP_TIMEOUT_MS = 5000;
 
 static bool isBtnPressed();
 
@@ -239,6 +241,8 @@ void publish() {
     );
 
     HTTPClient http;
+    http.setConnectTimeout(HTTP_CONNECT_TIMEOUT_MS);
+    http.setTimeout(HTTP_TCP_TIMEOUT_MS);
     if (!http.begin(HTTP_URL)) {
         Serial.println("HTTP POST network error: could not initialize HTTP client");
         http.end();
