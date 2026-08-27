@@ -211,7 +211,7 @@ void maintainWifi() {
 
 void publish() {
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("HTTP POST error: Wi-Fi unavailable");
+        Serial.println("HTTP POST network error: Wi-Fi unavailable");
         return;
     }
 
@@ -240,7 +240,7 @@ void publish() {
 
     HTTPClient http;
     if (!http.begin(HTTP_URL)) {
-        Serial.println("HTTP POST failed: could not initialize HTTP client");
+        Serial.println("HTTP POST network error: could not initialize HTTP client");
         http.end();
         return;
     }
@@ -248,13 +248,15 @@ void publish() {
     http.addHeader("Content-Type", "application/json");
     const int httpStatus = http.POST(payload);
 
-    if (httpStatus > 0) {
-        Serial.printf("HTTP POST success: status=%d\n", httpStatus);
+    if (httpStatus >= 200 && httpStatus < 300) {
+        Serial.printf("HTTP POST succeeded: status=%d\n", httpStatus);
         Serial.println("httpbin response body:");
         Serial.println(http.getString());
+    } else if (httpStatus > 0) {
+        Serial.printf("HTTP POST server error: status=%d\n", httpStatus);
     } else {
         Serial.printf(
-            "HTTP POST failed: %s\n",
+            "HTTP POST network error: %s\n",
             http.errorToString(httpStatus).c_str()
         );
     }
