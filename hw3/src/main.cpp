@@ -35,7 +35,10 @@ static READ_STATE readState = SILENCE;
 static bool btnPrevPressed = false;
 
 static bool isBtnPressed();
+
 static bool isBtnClicked(bool currentState);
+
+static void catchReadStateChange();
 
 void setup() {
     Serial.begin(115200);
@@ -47,11 +50,7 @@ void setup() {
 }
 
 void loop() {
-    bool btnPressed = isBtnPressed();
-    if (isBtnClicked(btnPressed)) {
-        readState = readState == SILENCE ? MONITOR : SILENCE;
-    }
-    btnPrevPressed = btnPressed;
+    catchReadStateChange();
 
     Serial.println(readState);
 }
@@ -72,4 +71,12 @@ bool isBtnPressed() {
 
 static bool isBtnClicked(const bool currentState) {
     return !currentState && btnPrevPressed;
+}
+
+static void catchReadStateChange() {
+    bool btnPressed = isBtnPressed();
+    if (isBtnClicked(btnPressed)) {
+        readState = readState == SILENCE ? MONITOR : SILENCE;
+    }
+    btnPrevPressed = btnPressed;
 }
