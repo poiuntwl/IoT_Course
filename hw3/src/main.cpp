@@ -24,11 +24,18 @@
 
 #define BUTTON_PIN 4
 
+namespace {
+    enum READ_STATE { SILENCE, MONITOR };
+}
+
 static bool btnLastRawState;
 static bool btnStableState;
 static ulong btnLastChangeTime;
+static READ_STATE readState = SILENCE;
+static bool btnPrevPressed = false;
 
 static bool isBtnPressed();
+static bool isBtnClicked(bool currentState);
 
 void setup() {
     Serial.begin(115200);
@@ -41,11 +48,12 @@ void setup() {
 
 void loop() {
     bool btnPressed = isBtnPressed();
-    if (btnPressed) {
-        Serial.println("Pressed");
-    } else {
-        Serial.println("Not Pressed");
+    if (isBtnClicked(btnPressed)) {
+        readState = readState == SILENCE ? MONITOR : SILENCE;
     }
+    btnPrevPressed = btnPressed;
+
+    Serial.println(readState);
 }
 
 bool isBtnPressed() {
@@ -60,4 +68,8 @@ bool isBtnPressed() {
     }
 
     return btnStableState == LOW;
+}
+
+static bool isBtnClicked(const bool currentState) {
+    return !currentState && btnPrevPressed;
 }
