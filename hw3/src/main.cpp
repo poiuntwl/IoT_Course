@@ -166,12 +166,14 @@ void lightLed(int ldrRaw) {
 }
 
 void printSensors() {
-    Serial.printf(
-        "Temp: %.1f C, Humidity: %.1f %%, LDR raw ADC: %d\r\n",
-        temperature,
-        humidity,
-        ldrRaw
-    );
+    Serial.print("Temperature: ");
+    Serial.print(temperature, 1);
+    Serial.println(" C");
+    Serial.print("Humidity: ");
+    Serial.print(humidity, 1);
+    Serial.println(" %");
+    Serial.print("LDR raw ADC: ");
+    Serial.println(ldrRaw);
 }
 
 void connectWifi() {
@@ -186,10 +188,8 @@ void maintainWifi() {
 
     if (wifiConnected) {
         if (!wifiWasConnected) {
-            Serial.printf(
-                "Wi-Fi connected. IP: %s\n",
-                WiFi.localIP().toString().c_str()
-            );
+            Serial.print("Wi-Fi connected. IP: ");
+            Serial.println(WiFi.localIP().toString());
         }
         wifiWasConnected = true;
         wifiUnavailableReported = false;
@@ -253,16 +253,16 @@ void publish() {
     const int httpStatus = http.POST(payload);
 
     if (httpStatus >= 200 && httpStatus < 300) {
-        Serial.printf("HTTP POST succeeded: status=%d\n", httpStatus);
+        Serial.print("HTTP POST succeeded: status=");
+        Serial.println(httpStatus);
         Serial.println("httpbin response body:");
         Serial.println(http.getString());
     } else if (httpStatus > 0) {
-        Serial.printf("HTTP POST server error: status=%d\n", httpStatus);
+        Serial.print("HTTP POST server error: status=");
+        Serial.println(httpStatus);
     } else {
-        Serial.printf(
-            "HTTP POST network error: %s\n",
-            http.errorToString(httpStatus).c_str()
-        );
+        Serial.print("HTTP POST network error: ");
+        Serial.println(http.errorToString(httpStatus));
     }
 
     http.end();
