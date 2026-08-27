@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <DHT.h>
 
 /// components:
 /// button:         digital input
@@ -25,7 +26,10 @@
 #define BUTTON_PIN 4
 #define LDR_PIN 34
 #define LED_PIN 26
+#define DHT22_PIN 27
 #define LIGHT_THRESHOLD 100
+
+DHT dht(DHT22_PIN, DHT22);
 
 namespace {
     enum READ_STATE { SILENCE, MONITOR };
@@ -36,38 +40,50 @@ static bool btnStableState;
 static ulong btnLastChangeTime;
 static READ_STATE readState = SILENCE;
 static bool btnPrevPressed = false;
+
 static ulong lastSensorReadTimestamp;
+static int brightness;
+static float temperature;
+static float humidity;
 
 static bool isBtnPressed();
 
 static bool isBtnClicked(bool currentState);
 
-static void catchReadStateChange();
+static bool catchReadStateChange();
 
 static void lightLed(int brightness);
 
+static void printSensors();
+
 void setup() {
     Serial.begin(115200);
+    dht.begin();
 
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     pinMode(LED_PIN, OUTPUT);
+    pinMode(DHT22_PIN, INPUT);
 
     btnLastRawState = digitalRead(BUTTON_PIN);
     btnStableState = btnLastRawState;
 }
 
 void loop() {
-    catchReadStateChange();
+    if (catchReadStateChange()) {
+        lastSensorReadTimestamp = millis();
+    }
 
     if (millis() - lastSensorReadTimestamp > 5000) {
+        brightness = analogRead(LDR_PIN);
+        temperature = dht.readTemperature();
+        humidity = dht.readHumidity();
+        lightLed(brightness);
+
         lastSensorReadTimestamp = millis();
 
         if (readState == MONITOR) {
-            // send
+            printSensors();
         }
-
-        int brightness = analogRead(LDR_PIN);
-        lightLed(brightness);
     }
 }
 
@@ -89,19 +105,31 @@ static bool isBtnClicked(const bool currentState) {
     return !currentState && btnPrevPressed;
 }
 
-static void catchReadStateChange() {
+static bool catchReadStateChange() {
+    bool changed = false;
     bool btnPressed = isBtnPressed();
     if (isBtnClicked(btnPressed)) {
         readState = readState == SILENCE ? MONITOR : SILENCE;
+        changed = true;
     }
     btnPrevPressed = btnPressed;
+
+    return changed;
 }
 
 void lightLed(int brightness) {
-    Serial.println(brightness);
     if (brightness >= LIGHT_THRESHOLD) {
         digitalWrite(LED_PIN, HIGH);
     } else {
         digitalWrite(LED_PIN, LOW);
     }
+}
+
+void printSensors() {
+    Serial.printf(
+        "Temp: %.1f C, Humidity: %.1f %%, Brightness (reversed): %d\r\n",
+        temperature,
+        humidity,
+        brightness
+    );
 }

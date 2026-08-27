@@ -12,7 +12,7 @@
             "attrs": { "color": "green", "xray": "1", "key": " ", "bounce": "1" }
         },
         { "type": "wokwi-photoresistor-sensor", "id": "ldr1", "top": 128, "left": 173.6, "attrs": {} },
-        { "type": "wokwi-dht22", "id": "dht1", "top": -134.1, "left": 292.2, "attrs": {} },
+        { "type": "wokwi-dht22", "id": "dht1", "top": -162.9, "left": 282.6, "attrs": {} },
         { "type": "wokwi-led", "id": "led1", "top": 140.4, "left": 119, "attrs": { "color": "red" } }
     ],
     "connections": [
@@ -24,7 +24,10 @@
         [ "btn1:2.l", "esp:GND.3", "black", [ "h-28.8", "v86.6" ] ],
         [ "esp:34", "ldr1:AO", "green", [ "h-9.45", "v192", "h355.2", "v-85.7" ] ],
         [ "esp:26", "led1:A", "green", [ "h-19.05", "v105.6", "h172.4" ] ],
-        [ "led1:C", "esp:GND.3", "black", [ "h-9.2", "v-96" ] ]
+        [ "led1:C", "esp:GND.3", "black", [ "h-9.2", "v-96" ] ],
+        [ "dht1:GND", "esp:GND.3", "black", [ "v0" ] ],
+        [ "dht1:VCC", "esp:3V3", "red", [ "h-297.75" ] ],
+        [ "dht1:SDA", "esp:27", "green", [ "v9.6", "h-335.9", "v163.2" ] ]
     ],
     "dependencies": {}
 }
