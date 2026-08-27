@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <DHT.h>
+#include <HTTPClient.h>
 #include <WiFi.h>
-#include <PubSubClient.h>
 
 /// components:
 /// button:         digital input
@@ -33,7 +33,6 @@
 #define SENSOR_PRINT_INTERVAL 5000
 #define SENSOR_PUBLISH_INTERVAL 30000
 #define WIFI_RECHECK_INTERVAL 30000
-#define MQTT_RETRY_INTERVAL 30000
 
 namespace {
     enum READ_STATE { SILENCE, MONITOR };
@@ -54,13 +53,7 @@ static float humidity;
 
 static const char *WIFI_SSID = "Wokwi-GUEST";
 static const char *WIFI_PASSWORD = "";
-
-static const char *MQTT_HOST = "broker.hivemq.com";
-static const uint16_t MQTT_PORT = 1883;
-static ulong lastMqttRetry;
-
-static WiFiClient wifiClient;
-static PubSubClient mqttClient(wifiClient);
+static const char *HTTP_URL = "http://httpbin.org/post";
 
 static bool isBtnPressed();
 
@@ -74,11 +67,7 @@ static void printSensors();
 
 static bool connectWifi();
 
-static bool connectMqtt();
-
 static void publish();
-
-static void doctorMqtt(ulong now);
 
 void setup() {
     Serial.begin(115200);
@@ -91,9 +80,7 @@ void setup() {
     btnLastRawState = digitalRead(BUTTON_PIN);
     btnStableState = btnLastRawState;
 
-    mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     connectWifi();
-    connectMqtt();
 }
 
 void loop() {
@@ -103,8 +90,6 @@ void loop() {
         lastSensorReadTimestamp = now;
         lastSensorPublishTimestamp = now;
     }
-
-    doctorMqtt(now);
 
     if (now - lastSensorReadTimestamp >= SENSOR_PRINT_INTERVAL) {
         brightness = analogRead(LDR_PIN);
@@ -202,27 +187,12 @@ bool connectWifi() {
     return true;
 }
 
-bool connectMqtt() {
-    if (WiFiClass::status() != WL_CONNECTED) {
-        return false;
-    }
-
-    Serial.print("Connecting to MQTT... ");
-
-    if (!mqttClient.connect("esp32-client")) {
-        Serial.printf(
-            "failed, state=%d\n",
-            mqttClient.state()
-        );
-
-        return false;
-    }
-
-    Serial.println("connected");
-    return true;
-}
-
 void publish() {
+    if (WiFiClass::status() != WL_CONNECTED) {
+        Serial.println("HTTP POST error: Wi-Fi unavailable");
+        return;
+    }
+
     char payload[128];
     snprintf(
         payload,
@@ -233,20 +203,26 @@ void publish() {
         brightness
     );
 
-    mqttClient.publish(
-        "55debed3-a003-419e-bf0f-255b4293f0b5/esp32/sensors",
-        payload
-    );
-}
-
-static void doctorMqtt(const ulong now) {
-    if (mqttClient.connected()) {
-        mqttClient.loop();
+    HTTPClient http;
+    if (!http.begin(HTTP_URL)) {
+        Serial.println("HTTP POST failed: could not initialize HTTP client");
+        http.end();
+        return;
     }
 
-    if (!mqttClient.connected()
-        && millis() - lastMqttRetry >= MQTT_RETRY_INTERVAL) {
-        connectMqtt();
-        lastMqttRetry = now;
+    http.addHeader("Content-Type", "application/json");
+    const int httpStatus = http.POST(payload);
+
+    if (httpStatus > 0) {
+        Serial.printf("HTTP POST success: status=%d\n", httpStatus);
+        Serial.println("httpbin response body:");
+        Serial.println(http.getString());
+    } else {
+        Serial.printf(
+            "HTTP POST failed: %s\n",
+            http.errorToString(httpStatus).c_str()
+        );
     }
+
+    http.end();
 }
