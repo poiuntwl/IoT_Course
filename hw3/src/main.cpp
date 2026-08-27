@@ -208,13 +208,26 @@ void publish() {
         return;
     }
 
+    char temperatureJson[16];
+    char humidityJson[16];
+    if (isnan(temperature)) {
+        strcpy(temperatureJson, "null");
+    } else {
+        snprintf(temperatureJson, sizeof(temperatureJson), "%.1f", temperature);
+    }
+    if (isnan(humidity)) {
+        strcpy(humidityJson, "null");
+    } else {
+        snprintf(humidityJson, sizeof(humidityJson), "%.1f", humidity);
+    }
+
     char payload[128];
     snprintf(
         payload,
         sizeof(payload),
-        R"({"temperature":%.1f,"humidity":%.1f,"brightness":%d})",
-        temperature,
-        humidity,
+        R"({"temperature":%s,"humidity":%s,"brightness":%d})",
+        temperatureJson,
+        humidityJson,
         brightness
     );
 
