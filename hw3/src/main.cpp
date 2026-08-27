@@ -94,7 +94,7 @@ void loop() {
 
     const ulong now = millis();
     // start countdown whenever we start monitoring
-    if (catchReadStateChange()) {
+    if (catchReadStateChange() && readState == MONITOR) {
         lastSensorReadTimestamp = now;
         lastSensorPublishTimestamp = now;
     }
