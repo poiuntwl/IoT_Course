@@ -80,7 +80,6 @@ void setup() {
 
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     pinMode(LED_PIN, OUTPUT);
-    pinMode(DHT22_PIN, INPUT);
 
     btnLastRawState = digitalRead(BUTTON_PIN);
     btnStableState = btnLastRawState;
