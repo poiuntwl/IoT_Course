@@ -24,7 +24,7 @@
         [ "btn1:2.l", "esp:GND.3", "black", [ "h-28.8", "v86.6" ] ],
         [ "esp:34", "ldr1:AO", "green", [ "h-9.45", "v192", "h355.2", "v-85.7" ] ],
         [ "esp:26", "led1:A", "green", [ "h-19.05", "v105.6", "h172.4" ] ],
-        [ "led1:C", "esp:GND.3", "black", [ "h9.6", "v-96" ] ]
+        [ "led1:C", "esp:GND.3", "black", [ "h-9.2", "v-96" ] ]
     ],
     "dependencies": {}
 }

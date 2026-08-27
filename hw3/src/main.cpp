@@ -59,7 +59,7 @@ void setup() {
 void loop() {
     catchReadStateChange();
 
-    if (millis() - lastSensorReadTimestamp > 1000) {
+    if (millis() - lastSensorReadTimestamp > 5000) {
         lastSensorReadTimestamp = millis();
 
         if (readState == MONITOR) {
