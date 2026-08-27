@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 /// components:
 /// button:         digital input
 /// photoresistor:  analog input
@@ -20,10 +22,22 @@
 /// WI-FI unavailable: output message, continue
 /// sensor errors: output message, continue
 
-namespace {
-    void setup() {
+#define BUTTON_PIN 4
+
+void setup() {
+    Serial.begin(115200);
+
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+}
+
+void loop() {
+    bool pressed = digitalRead(BUTTON_PIN) == LOW;
+
+    if (pressed) {
+        Serial.println("Pressed");
+    } else {
+        Serial.println("Not Pressed");
     }
 
-    void loop() {
-    }
+    delay(100);
 }
