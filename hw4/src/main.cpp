@@ -28,7 +28,9 @@ static void ensureWifi();
 
 static void ensureMQTT();
 
-static ulong lastSentTs;
+static void formatWithFallback(float val, char *buffer, size_t bufferSize);
+
+static ulong lastPubTs;
 static ulong lastWifiCheckTs;
 static ulong lastMqttCheckTs;
 
@@ -40,8 +42,23 @@ void loop() {
 
 
 static void pubTnH() {
-    if (millis() - lastSentTs >= 10000) {
-        Serial.println("publish TH");
+    if (mqttClient.connected() && millis() - lastPubTs >= 10000) {
+        lastPubTs = millis();
+
+        char t[16];
+        char h[16];
+
+        formatWithFallback(dht.getTemperature(), t, sizeof(t));
+        formatWithFallback(dht.getHumidity(), h, sizeof(h));
+
+        char payload[128];
+        snprintf(
+            payload,
+            sizeof(payload),
+            R"({"temperature":%s,"humidity":%s})",
+            t, h);
+
+        mqttClient.publish("iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors", payload);
     }
 }
 
@@ -54,7 +71,6 @@ static void ensureWifi() {
         WiFi.begin();
     }
 }
-
 
 static void ensureMQTT() {
     if (WiFi.isConnected() == false) {
@@ -69,5 +85,13 @@ static void ensureMQTT() {
     if (millis() - lastMqttCheckTs >= 5000) {
         lastMqttCheckTs = millis();
         mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
+    }
+}
+
+static void formatWithFallback(const float val, char *buffer, const size_t bufferSize) {
+    if (isnan(val)) {
+        snprintf(buffer, bufferSize, "null");
+    } else {
+        snprintf(buffer, bufferSize, "%.1f", val);
     }
 }
