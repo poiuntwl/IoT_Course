@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <DHTesp.h>
+#include <PubSubClient.h>
 
 constexpr int DHT_PIN = 26;
 constexpr int BTN_PIN = 19;
