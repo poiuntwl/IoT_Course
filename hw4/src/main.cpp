@@ -8,6 +8,12 @@ constexpr int BTN_PIN = 19;
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
 constexpr uint16_t MQTT_PORT = 1883;
 
+static bool btnLastRawState;
+static bool btnStableState;
+static ulong btnLastChangeTime;
+static bool btnPrevPressed = false;
+
+
 static DHTesp dht;
 
 static WiFiClient wifiClient;
@@ -29,6 +35,10 @@ static void ensureWifi();
 static void ensureMQTT();
 
 static void formatWithFallback(float val, char *buffer, size_t bufferSize);
+
+bool isBtnPressed();
+
+static bool isBtnClicked(const bool currentState);
 
 static ulong lastPubTs;
 static ulong lastWifiCheckTs;
@@ -94,4 +104,22 @@ static void formatWithFallback(const float val, char *buffer, const size_t buffe
     } else {
         snprintf(buffer, bufferSize, "%.1f", val);
     }
+}
+
+bool isBtnPressed() {
+    const bool btnRaw = digitalRead(BTN_PIN);
+    if (btnRaw != btnLastRawState) {
+        btnLastRawState = btnRaw;
+        btnLastChangeTime = millis();
+    }
+
+    if (millis() - btnLastChangeTime >= 20) {
+        btnStableState = btnRaw;
+    }
+
+    return btnStableState == LOW;
+}
+
+static bool isBtnClicked(const bool currentState) {
+    return !currentState && btnPrevPressed;
 }
