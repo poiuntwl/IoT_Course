@@ -17,7 +17,7 @@ static void pubTnH();
 static ulong lastSentTs;
 
 void loop() {
-    if (lastSentTs - millis() > 10000) {
+    if (millis() - lastSentTs > 10000) {
         pubTnH();
     }
 }
