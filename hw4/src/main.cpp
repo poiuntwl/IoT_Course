@@ -52,8 +52,18 @@ void loop() {
 
 
 static void pubTnH() {
-    if (mqttClient.connected() && millis() - lastPubTs >= 10000) {
+    if (millis() - lastPubTs >= 10000) {
         lastPubTs = millis();
+
+        if (WiFi.isConnected() == false) {
+            Serial.println("WiFi unavailable during publish.");
+            return;
+        }
+
+        if (mqttClient.connected() == false) {
+            Serial.println("Mqtt unavailable during publish");
+            return;
+        }
 
         char t[16];
         char h[16];
