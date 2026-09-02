@@ -12,7 +12,16 @@ void setup() {
     pinMode(BTN_PIN, INPUT_PULLUP);
 }
 
+static void pubTnH();
+
+static ulong lastSentTs;
+
 void loop() {
-    Serial.println(dht.getHumidity());
-    delay(1000);
+    if (lastSentTs - millis() > 10000) {
+        pubTnH();
+    }
+}
+
+
+static void pubTnH() {
 }
