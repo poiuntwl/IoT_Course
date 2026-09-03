@@ -98,7 +98,7 @@ static void ensureWifi() {
 }
 
 static void ensureMQTT() {
-    static ulong lastMqttCheckTs;
+    static ulong lastMqttCheckTs = millis();
 
     if (WiFi.isConnected() == false) {
         return;
@@ -107,6 +107,7 @@ static void ensureMQTT() {
     if (mqttClient.connected()) {
         mqttClient.loop();
         currentConnectRetryMQTT = 0;
+        lastMqttCheckTs = millis();
         return;
     }
 
