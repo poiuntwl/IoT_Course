@@ -65,7 +65,7 @@ void setup() {
         });
 
     if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
-        mqttClient.subscribe(SENSOR_TEMP_TOPIC);
+        mqttClient.subscribe(SENSOR_TEMP_TOPIC, 1);
         mqttClient.subscribe(COMMANDS_TOPIC);
     }
 }
@@ -120,7 +120,7 @@ static void ensureMQTT() {
         currentConnectRetryMQTT++;
         if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
             currentConnectRetryMQTT = 0;
-            mqttClient.subscribe(SENSOR_TEMP_TOPIC);
+            mqttClient.subscribe(SENSOR_TEMP_TOPIC, 1);
             mqttClient.subscribe(COMMANDS_TOPIC);
         }
     }
