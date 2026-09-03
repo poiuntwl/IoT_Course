@@ -8,14 +8,6 @@ constexpr int BTN_PIN = 19;
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
 constexpr uint16_t MQTT_PORT = 1883;
 
-static bool btnLastRawState;
-static bool btnStableState;
-static ulong btnLastChangeTime;
-
-static ulong lastPubTs;
-static ulong lastWifiCheckTs;
-static ulong lastMqttCheckTs;
-
 static DHTesp dht;
 
 static WiFiClient wifiClient;
@@ -38,15 +30,10 @@ void setup() {
     dht.setup(DHT_PIN, DHTesp::DHT22);
     pinMode(BTN_PIN, INPUT_PULLUP);
 
-    btnLastRawState = digitalRead(BTN_PIN);
-    btnStableState = btnLastRawState;
-
     WiFi.begin("Wokwi-GUEST");
-    lastWifiCheckTs = millis();
 
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
-    lastMqttCheckTs = millis();
 }
 
 void loop() {
@@ -54,7 +41,6 @@ void loop() {
     ensureMQTT();
     pubTnH();
 
-    const bool btnPressed = isBtnPressed();
     const bool btnClicked = isBtnClicked();
     if (btnClicked) {
         Serial.println("clicked");
@@ -63,6 +49,8 @@ void loop() {
 
 
 static void pubTnH() {
+    static ulong lastPubTs;
+
     if (millis() - lastPubTs >= 10000) {
         lastPubTs = millis();
 
@@ -94,6 +82,8 @@ static void pubTnH() {
 }
 
 static void ensureWifi() {
+    static ulong lastWifiCheckTs;
+
     if (WiFi.isConnected()) {
         return;
     }
@@ -104,6 +94,8 @@ static void ensureWifi() {
 }
 
 static void ensureMQTT() {
+    static ulong lastMqttCheckTs;
+
     if (WiFi.isConnected() == false) {
         return;
     }
@@ -128,6 +120,10 @@ static void formatWithFallback(const float val, char *buffer, const size_t buffe
 }
 
 bool isBtnPressed() {
+    static bool btnLastRawState = digitalRead(BTN_PIN);
+    static bool btnStableState = btnLastRawState;
+    static ulong btnLastChangeTime;
+
     const bool btnRaw = digitalRead(BTN_PIN);
     if (btnRaw != btnLastRawState) {
         btnLastRawState = btnRaw;
