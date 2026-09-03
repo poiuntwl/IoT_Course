@@ -10,14 +10,13 @@ static constexpr uint16_t MQTT_PORT = 1883;
 static constexpr uint8_t BLINK_COUNT = 3;
 static constexpr ulong BLINK_INTERVAL_MS = 500;
 
-constexpr char SENSOR_TOPIC[] =
-        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors";
+constexpr char SENSOR_TEMP_TOPIC[] =
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors/temperature";
+constexpr char SENSOR_HUM_TOPIC[] =
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors/humidity";
 
 constexpr char COMMANDS_TOPIC[] =
         "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/commands";
-
-constexpr char SENSOR_PAYLOAD_FORMAT[] =
-        R"({"temperature":%s,"humidity":%s})";
 
 static WiFiClient wifiClient;
 static PubSubClient mqttClient(wifiClient);
@@ -33,9 +32,9 @@ static void ensureMQTT();
 
 static void execCommand(const byte *payload, unsigned int length);
 
-static void updateSensors(byte *payload, unsigned int length);
+static void updateSensors(byte *payload, unsigned int length, const char *topic);
 
-void updateBlink();
+static void updateBlink();
 
 void setup() {
     Serial.begin(115200);
@@ -53,15 +52,16 @@ void setup() {
                 execCommand(payload, length);
             }
 
-            if (strcmp(topic, SENSOR_TOPIC) == 0) {
-                updateSensors(payload, length);
+            if (strcmp(topic, SENSOR_TEMP_TOPIC) == 0
+                || strcmp(topic, SENSOR_HUM_TOPIC) == 0) {
+                updateSensors(payload, length, topic);
             }
 
             JsonDocument doc;
         });
 
     if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
-        mqttClient.subscribe(SENSOR_TOPIC);
+        mqttClient.subscribe(SENSOR_TEMP_TOPIC);
         mqttClient.subscribe(COMMANDS_TOPIC);
     }
 }
@@ -101,7 +101,7 @@ static void ensureMQTT() {
     if (millis() - lastMqttCheckTs >= 5000) {
         lastMqttCheckTs = millis();
         if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
-            mqttClient.subscribe(SENSOR_TOPIC);
+            mqttClient.subscribe(SENSOR_TEMP_TOPIC);
             mqttClient.subscribe(COMMANDS_TOPIC);
         }
     }
@@ -121,8 +121,6 @@ void execCommand(const byte *payload, const unsigned int length) {
     message[length] = '\0';
 
     if (strcmp(message, "manual_read") == 0) {
-        Serial.println("Manual trigger received.");
-
         blinking = true;
         blinkState = true;
         blinkTransitions = 0;
@@ -132,7 +130,7 @@ void execCommand(const byte *payload, const unsigned int length) {
     }
 }
 
-void updateSensors(byte *payload, unsigned int length) {
+void updateSensors(byte *payload, unsigned int length, const char *topic) {
     JsonDocument doc;
 
     const DeserializationError error = deserializeJson(doc, payload, length);
@@ -142,16 +140,18 @@ void updateSensors(byte *payload, unsigned int length) {
         return;
     }
 
-    const float temperature = doc["temperature"];
-    const float humidity = doc["humidity"];
-
-    if (temperature > 26) {
-        // enable led
-    } else if (temperature < 20) {
-        // disable led
+    if (strcmp(topic, SENSOR_TEMP_TOPIC) == 0) {
+        const float temperature = doc["temperature"];
+        if (temperature > 26) {
+            // enable led
+        } else if (temperature < 20) {
+            // disable led
+        }
     }
 
-    Serial.printf("%.1f %.1f\r\n", temperature, humidity);
+    if (strcmp(topic, SENSOR_HUM_TOPIC) == 0) {
+        const float humidity = doc["humidity"];
+    }
 }
 
 void updateBlink() {

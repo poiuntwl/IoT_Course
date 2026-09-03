@@ -3,19 +3,22 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
+// constexpr int PUBLISH_INTERVAL = 10000;
+constexpr int PUBLISH_INTERVAL = 1000;
 constexpr int DHT_PIN = 26;
 constexpr int BTN_PIN = 19;
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
 constexpr uint16_t MQTT_PORT = 1883;
 
-constexpr char SENSOR_TOPIC[] =
-    "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors";
+constexpr char SENSOR_TEMP_TOPIC[] =
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors/temperature";
+constexpr char SENSOR_HUM_TOPIC[] =
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors/humidity";
 
 constexpr char COMMANDS_TOPIC[] =
-    "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/commands";
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/commands";
 
-constexpr char SENSOR_PAYLOAD_FORMAT[] =
-    R"({"temperature":%s,"humidity":%s})";
+constexpr char SENSOR_PAYLOAD_FORMAT[] = R"({"%s":%s})";
 
 static DHTesp dht;
 
@@ -41,7 +44,7 @@ static bool pubPayload(
     const char *payload
 );
 
-template <typename... Args>
+template<typename... Args>
 static bool pubPayloadFmt(
     const char *topic,
     const char *format,
@@ -71,7 +74,7 @@ void loop() {
 static void pubTnH() {
     static ulong lastPubTs;
 
-    if (millis() - lastPubTs >= 10000) {
+    if (millis() - lastPubTs >= PUBLISH_INTERVAL) {
         lastPubTs = millis();
 
         if (WiFi.isConnected() == false) {
@@ -90,7 +93,8 @@ static void pubTnH() {
         formatWithFallback(dht.getTemperature(), t, sizeof(t));
         formatWithFallback(dht.getHumidity(), h, sizeof(h));
 
-        pubPayloadFmt(SENSOR_TOPIC, SENSOR_PAYLOAD_FORMAT, t, h);
+        pubPayloadFmt(SENSOR_TEMP_TOPIC, SENSOR_PAYLOAD_FORMAT, "temperature", t);
+        pubPayloadFmt(SENSOR_HUM_TOPIC, SENSOR_PAYLOAD_FORMAT, "humidity", h);
     }
 }
 
@@ -176,7 +180,7 @@ static bool pubPayload(
     return mqttClient.publish(topic, payload);
 }
 
-template <typename... Args>
+template<typename... Args>
 static bool pubPayloadFmt(
     const char *topic,
     const char *format,
