@@ -18,6 +18,10 @@ constexpr char SENSOR_HUM_TOPIC[] =
 
 constexpr char COMMANDS_TOPIC[] =
         "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/commands";
+constexpr char ACTUATOR_LED_TOPIC[] =
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/actuators/led";
+constexpr char STATUS_TOPIC[] =
+        "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/status";
 
 static WiFiClient wifiClient;
 static PubSubClient mqttClient(wifiClient);
@@ -39,6 +43,8 @@ static void execCommand(const byte *payload, unsigned int length);
 static void updateSensors(byte *payload, unsigned int length, const char *topic);
 
 static void updateBlink();
+
+static void setLed(bool on);
 
 void setup() {
     Serial.begin(115200);
@@ -67,6 +73,7 @@ void setup() {
     if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
         mqttClient.subscribe(SENSOR_TEMP_TOPIC, 1);
         mqttClient.subscribe(COMMANDS_TOPIC);
+        mqttClient.publish(STATUS_TOPIC, "online");
     }
 }
 
@@ -122,6 +129,7 @@ static void ensureMQTT() {
             currentConnectRetryMQTT = 0;
             mqttClient.subscribe(SENSOR_TEMP_TOPIC, 1);
             mqttClient.subscribe(COMMANDS_TOPIC);
+            mqttClient.publish(STATUS_TOPIC, "online");
         }
     }
 }
@@ -146,7 +154,7 @@ void execCommand(const byte *payload, const unsigned int length) {
         blinkTransitions = 0;
         lastBlinkTs = millis();
 
-        digitalWrite(LED_PIN, HIGH);
+        setLed(true);
     }
 }
 
@@ -163,9 +171,9 @@ void updateSensors(byte *payload, unsigned int length, const char *topic) {
     if (strcmp(topic, SENSOR_TEMP_TOPIC) == 0) {
         const float temperature = doc["temperature"];
         if (temperature > 26) {
-            digitalWrite(LED_PIN, HIGH);
+            setLed(true);
         } else if (temperature < 20) {
-            digitalWrite(LED_PIN, LOW);
+            setLed(false);
         }
     }
 
@@ -186,13 +194,18 @@ void updateBlink() {
     lastBlinkTs = millis();
 
     blinkState = !blinkState;
-    digitalWrite(LED_PIN, blinkState ? HIGH : LOW);
+    setLed(blinkState);
 
     ++blinkTransitions;
 
     if (blinkTransitions >= BLINK_COUNT * 2) {
         blinking = false;
         blinkState = false;
-        digitalWrite(LED_PIN, LOW);
+        setLed(false);
     }
+}
+
+static void setLed(const bool on) {
+    digitalWrite(LED_PIN, on ? HIGH : LOW);
+    mqttClient.publish(ACTUATOR_LED_TOPIC, on ? "on" : "off");
 }

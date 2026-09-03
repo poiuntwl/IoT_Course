@@ -3,8 +3,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-// constexpr int PUBLISH_INTERVAL = 10000;
-constexpr int PUBLISH_INTERVAL = 1000;
+constexpr int PUBLISH_INTERVAL = 10000;
 constexpr int DHT_PIN = 26;
 constexpr int BTN_PIN = 19;
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
