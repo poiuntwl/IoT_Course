@@ -11,7 +11,6 @@ constexpr uint16_t MQTT_PORT = 1883;
 static bool btnLastRawState;
 static bool btnStableState;
 static ulong btnLastChangeTime;
-static bool btnPrevPressed = false;
 
 static ulong lastPubTs;
 static ulong lastWifiCheckTs;
@@ -32,7 +31,7 @@ static void formatWithFallback(float val, char *buffer, size_t bufferSize);
 
 static bool isBtnPressed();
 
-static bool isBtnClicked(bool currentState);
+static bool isBtnClicked();
 
 void setup() {
     Serial.begin(115200);
@@ -56,9 +55,10 @@ void loop() {
     pubTnH();
 
     const bool btnPressed = isBtnPressed();
-    const bool btnClicked = isBtnClicked(btnPressed);
-    btnPrevPressed = btnPressed;
-    Serial.println(btnClicked);
+    const bool btnClicked = isBtnClicked();
+    if (btnClicked) {
+        Serial.println("clicked");
+    }
 }
 
 
@@ -138,9 +138,17 @@ bool isBtnPressed() {
         btnStableState = btnRaw;
     }
 
-    return btnStableState == LOW;
+    const bool r = btnStableState == LOW;
+    return r;
 }
 
-static bool isBtnClicked(const bool currentState) {
-    return !currentState && btnPrevPressed;
+bool isBtnClicked() {
+    static bool prevPressed = false;
+
+    const bool pressed = isBtnPressed();
+    const bool clicked = !pressed && prevPressed;
+
+    prevPressed = pressed;
+
+    return clicked;
 }
