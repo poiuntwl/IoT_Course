@@ -143,9 +143,9 @@ void updateSensors(byte *payload, unsigned int length, const char *topic) {
     if (strcmp(topic, SENSOR_TEMP_TOPIC) == 0) {
         const float temperature = doc["temperature"];
         if (temperature > 26) {
-            // enable led
+            digitalWrite(LED_PIN, HIGH);
         } else if (temperature < 20) {
-            // disable led
+            digitalWrite(LED_PIN, LOW);
         }
     }
 
