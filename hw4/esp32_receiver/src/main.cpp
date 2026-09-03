@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
+constexpr uint8_t LED_PIN = 19;
+
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
 constexpr uint16_t MQTT_PORT = 1883;
 
