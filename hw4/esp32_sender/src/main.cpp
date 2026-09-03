@@ -9,6 +9,7 @@ constexpr int DHT_PIN = 26;
 constexpr int BTN_PIN = 19;
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
 constexpr uint16_t MQTT_PORT = 1883;
+static constexpr uint8_t RETRY_COUNT = 3;
 
 constexpr char SENSOR_TEMP_TOPIC[] =
         "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors/temperature";
@@ -24,6 +25,9 @@ static DHTesp dht;
 
 static WiFiClient wifiClient;
 static PubSubClient mqttClient(wifiClient);
+
+static uint8_t currentConnectRetryWifi;
+static uint8_t currentConnectRetryMQTT;
 
 static void pubTnH();
 
@@ -102,11 +106,18 @@ static void ensureWifi() {
     static ulong lastWifiCheckTs;
 
     if (WiFi.isConnected()) {
+        currentConnectRetryWifi = 0;
         return;
     }
+
+    if (currentConnectRetryWifi >= RETRY_COUNT) {
+        return;
+    }
+
     if (millis() - lastWifiCheckTs >= 5000) {
         lastWifiCheckTs = millis();
         WiFi.begin();
+        currentConnectRetryWifi++;
     }
 }
 
@@ -119,12 +130,22 @@ static void ensureMQTT() {
 
     if (mqttClient.connected()) {
         mqttClient.loop();
+        currentConnectRetryMQTT = 0;
+        return;
+    }
+
+    if (currentConnectRetryMQTT >= RETRY_COUNT) {
         return;
     }
 
     if (millis() - lastMqttCheckTs >= 5000) {
         lastMqttCheckTs = millis();
-        mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
+        currentConnectRetryMQTT++;
+        if (mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2")) {
+            currentConnectRetryMQTT = 0;
+            mqttClient.subscribe(SENSOR_TEMP_TOPIC);
+            mqttClient.subscribe(COMMANDS_TOPIC);
+        }
     }
 }
 

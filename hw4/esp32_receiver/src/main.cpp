@@ -8,6 +8,7 @@ constexpr uint8_t LED_PIN = 19;
 static constexpr char MQTT_HOST[] = "test.mosquitto.org";
 static constexpr uint16_t MQTT_PORT = 1883;
 static constexpr uint8_t BLINK_COUNT = 3;
+static constexpr uint8_t RETRY_COUNT = 3;
 static constexpr ulong BLINK_INTERVAL_MS = 500;
 
 constexpr char SENSOR_TEMP_TOPIC[] =
@@ -25,6 +26,9 @@ static bool blinking = false;
 static bool blinkState = false;
 static uint8_t blinkTransitions = 0;
 static ulong lastBlinkTs = 0;
+
+static uint8_t currentConnectRetryWifi;
+static uint8_t currentConnectRetryMQTT;
 
 static void ensureWifi();
 
@@ -78,11 +82,18 @@ static void ensureWifi() {
     static ulong lastWifiCheckTs;
 
     if (WiFi.isConnected()) {
+        currentConnectRetryWifi = 0;
         return;
     }
+
+    if (currentConnectRetryWifi >= RETRY_COUNT) {
+        return;
+    }
+
     if (millis() - lastWifiCheckTs >= 5000) {
         lastWifiCheckTs = millis();
         WiFi.begin();
+        currentConnectRetryWifi++;
     }
 }
 
@@ -95,12 +106,19 @@ static void ensureMQTT() {
 
     if (mqttClient.connected()) {
         mqttClient.loop();
+        currentConnectRetryMQTT = 0;
+        return;
+    }
+
+    if (currentConnectRetryMQTT >= RETRY_COUNT) {
         return;
     }
 
     if (millis() - lastMqttCheckTs >= 5000) {
         lastMqttCheckTs = millis();
+        currentConnectRetryMQTT++;
         if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
+            currentConnectRetryMQTT = 0;
             mqttClient.subscribe(SENSOR_TEMP_TOPIC);
             mqttClient.subscribe(COMMANDS_TOPIC);
         }
@@ -121,6 +139,7 @@ void execCommand(const byte *payload, const unsigned int length) {
     message[length] = '\0';
 
     if (strcmp(message, "manual_read") == 0) {
+        Serial.println("Manual trigger received");
         blinking = true;
         blinkState = true;
         blinkTransitions = 0;
