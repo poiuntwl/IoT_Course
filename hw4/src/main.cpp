@@ -13,6 +13,9 @@ static bool btnStableState;
 static ulong btnLastChangeTime;
 static bool btnPrevPressed = false;
 
+static ulong lastPubTs;
+static ulong lastWifiCheckTs;
+static ulong lastMqttCheckTs;
 
 static DHTesp dht;
 
@@ -24,8 +27,15 @@ void setup() {
     dht.setup(DHT_PIN, DHTesp::DHT22);
     pinMode(BTN_PIN, INPUT_PULLUP);
 
+    btnLastRawState = digitalRead(BTN_PIN);
+    btnStableState = btnLastRawState;
+
     WiFi.begin("Wokwi-GUEST");
+    lastWifiCheckTs = millis();
+
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+    mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
+    lastMqttCheckTs = millis();
 }
 
 static void pubTnH();
@@ -36,18 +46,19 @@ static void ensureMQTT();
 
 static void formatWithFallback(float val, char *buffer, size_t bufferSize);
 
-bool isBtnPressed();
+static bool isBtnPressed();
 
-static bool isBtnClicked(const bool currentState);
-
-static ulong lastPubTs;
-static ulong lastWifiCheckTs;
-static ulong lastMqttCheckTs;
+static bool isBtnClicked(bool currentState);
 
 void loop() {
     ensureWifi();
     ensureMQTT();
     pubTnH();
+
+    const bool btnPressed = isBtnPressed();
+    const bool btnClicked = isBtnClicked(btnPressed);
+    btnPrevPressed = btnPressed;
+    Serial.println(btnClicked);
 }
 
 
