@@ -8,6 +8,15 @@ constexpr int BTN_PIN = 19;
 constexpr char MQTT_HOST[] = "test.mosquitto.org";
 constexpr uint16_t MQTT_PORT = 1883;
 
+constexpr char SENSOR_TOPIC[] =
+    "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors";
+
+constexpr char COMMANDS_TOPIC[] =
+    "iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/commands";
+
+constexpr char SENSOR_PAYLOAD_FORMAT[] =
+    R"({"temperature":%s,"humidity":%s})";
+
 static DHTesp dht;
 
 static WiFiClient wifiClient;
@@ -25,6 +34,20 @@ static bool isBtnPressed();
 
 static bool isBtnClicked();
 
+static void ifClickPub();
+
+static bool pubPayload(
+    const char *topic,
+    const char *payload
+);
+
+template <typename... Args>
+static bool pubPayloadFmt(
+    const char *topic,
+    const char *format,
+    Args... args
+);
+
 void setup() {
     Serial.begin(115200);
     dht.setup(DHT_PIN, DHTesp::DHT22);
@@ -36,15 +59,12 @@ void setup() {
     mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
 }
 
+
 void loop() {
     ensureWifi();
     ensureMQTT();
     pubTnH();
-
-    const bool btnClicked = isBtnClicked();
-    if (btnClicked) {
-        Serial.println("clicked");
-    }
+    ifClickPub();
 }
 
 
@@ -70,14 +90,7 @@ static void pubTnH() {
         formatWithFallback(dht.getTemperature(), t, sizeof(t));
         formatWithFallback(dht.getHumidity(), h, sizeof(h));
 
-        char payload[128];
-        snprintf(
-            payload,
-            sizeof(payload),
-            R"({"temperature":%s,"humidity":%s})",
-            t, h);
-
-        mqttClient.publish("iot-course/volodymyr_1de632fd-de4a-4802-99e0-11c756d002c4/sensors", payload);
+        pubPayloadFmt(SENSOR_TOPIC, SENSOR_PAYLOAD_FORMAT, t, h);
     }
 }
 
@@ -147,4 +160,36 @@ bool isBtnClicked() {
     prevPressed = pressed;
 
     return clicked;
+}
+
+void ifClickPub() {
+    const bool btnClicked = isBtnClicked();
+    if (btnClicked) {
+        pubPayload(COMMANDS_TOPIC, "manual_read");
+    }
+}
+
+static bool pubPayload(
+    const char *topic,
+    const char *payload
+) {
+    return mqttClient.publish(topic, payload);
+}
+
+template <typename... Args>
+static bool pubPayloadFmt(
+    const char *topic,
+    const char *format,
+    Args... args
+) {
+    char payload[128];
+
+    snprintf(
+        payload,
+        sizeof(payload),
+        format,
+        args...
+    );
+
+    return mqttClient.publish(topic, payload);
 }
