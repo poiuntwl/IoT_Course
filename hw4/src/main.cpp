@@ -22,6 +22,18 @@ static DHTesp dht;
 static WiFiClient wifiClient;
 static PubSubClient mqttClient(wifiClient);
 
+static void pubTnH();
+
+static void ensureWifi();
+
+static void ensureMQTT();
+
+static void formatWithFallback(float val, char *buffer, size_t bufferSize);
+
+static bool isBtnPressed();
+
+static bool isBtnClicked(bool currentState);
+
 void setup() {
     Serial.begin(115200);
     dht.setup(DHT_PIN, DHTesp::DHT22);
@@ -37,18 +49,6 @@ void setup() {
     mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
     lastMqttCheckTs = millis();
 }
-
-static void pubTnH();
-
-static void ensureWifi();
-
-static void ensureMQTT();
-
-static void formatWithFallback(float val, char *buffer, size_t bufferSize);
-
-static bool isBtnPressed();
-
-static bool isBtnClicked(bool currentState);
 
 void loop() {
     ensureWifi();
