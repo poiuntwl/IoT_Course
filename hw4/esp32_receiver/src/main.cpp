@@ -30,6 +30,19 @@ void setup() {
 
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
     mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
+    mqttClient.setCallback([](char *topic, const byte *payload, const unsigned int length) {
+        String message;
+
+        for (unsigned int i = 0; i < length; ++i) {
+            message += static_cast<char>(payload[i]);
+        }
+
+        Serial.printf("Topic: %s\n", topic);
+        Serial.printf("Payload: %s\n", message.c_str());
+    });
+
+    mqttClient.subscribe(SENSOR_TOPIC);
+    mqttClient.subscribe(COMMANDS_TOPIC);
 }
 
 
