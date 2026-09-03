@@ -29,7 +29,6 @@ void setup() {
     WiFi.begin("Wokwi-GUEST");
 
     mqttClient.setServer(MQTT_HOST, MQTT_PORT);
-    mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
     mqttClient.setCallback([](char *topic, const byte *payload, const unsigned int length) {
         String message;
 
@@ -37,12 +36,14 @@ void setup() {
             message += static_cast<char>(payload[i]);
         }
 
-        Serial.printf("Topic: %s\n", topic);
-        Serial.printf("Payload: %s\n", message.c_str());
+        Serial.printf("Topic: %s\r\n", topic);
+        Serial.printf("Payload: %s\r\n", message.c_str());
     });
 
-    mqttClient.subscribe(SENSOR_TOPIC);
-    mqttClient.subscribe(COMMANDS_TOPIC);
+    if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
+        mqttClient.subscribe(SENSOR_TOPIC);
+        mqttClient.subscribe(COMMANDS_TOPIC);
+    }
 }
 
 
@@ -78,6 +79,9 @@ static void ensureMQTT() {
 
     if (millis() - lastMqttCheckTs >= 5000) {
         lastMqttCheckTs = millis();
-        mqttClient.connect("993518a0-20c4-41ad-8228-a73bb2e601f2");
+        if (mqttClient.connect("48166572-b6cc-4618-b5fd-fb0ea59f595d")) {
+            mqttClient.subscribe(SENSOR_TOPIC);
+            mqttClient.subscribe(COMMANDS_TOPIC);
+        }
     }
 }
