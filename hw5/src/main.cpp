@@ -86,6 +86,7 @@ void publishTemperature() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("start");
   dht.begin();
 
   connectWifi();
