@@ -10,6 +10,13 @@
 namespace {
 constexpr uint8_t DHT_PIN = 15;
 constexpr unsigned long PUBLISH_INTERVAL_MS = 30000;
+constexpr unsigned long WIFI_RETRY_INITIAL_MS = 2000;
+constexpr unsigned long WIFI_RETRY_MAX_MS = 30000;
+constexpr unsigned long MQTT_RETRY_INITIAL_MS = 2000;
+constexpr unsigned long MQTT_RETRY_MAX_MS = 30000;
+constexpr unsigned long LOOP_DELAY_MS = 10;
+constexpr unsigned long NETWORK_TIMEOUT_SECONDS = 10;
+constexpr std::time_t MIN_VALID_EPOCH = 1700000000;
 constexpr uint16_t MQTT_PORT = 8883;
 
 constexpr char MQTT_CLIENT_ID[] = "esp32-volodya";
@@ -20,50 +27,80 @@ DHT dht(DHT_PIN, DHT22);
 WiFiClientSecure tlsClient;
 PubSubClient mqttClient(tlsClient);
 unsigned long lastPublishAt = 0;
+unsigned long lastWifiAttemptAt = 0;
+unsigned long lastMqttAttemptAt = 0;
+unsigned long wifiRetryIntervalMs = WIFI_RETRY_INITIAL_MS;
+unsigned long mqttRetryIntervalMs = MQTT_RETRY_INITIAL_MS;
+bool wifiConnectAttempted = false;
+bool mqttConnectAttempted = false;
+bool clockSyncStarted = false;
+bool clockSynchronized = false;
 
-void connectWifi() {
+unsigned long nextRetryInterval(unsigned long current, unsigned long maximum) {
+  return current >= maximum / 2 ? maximum : current * 2;
+}
+
+void connectWifi(unsigned long now) {
   if (WiFiClass::status() == WL_CONNECTED) {
+    wifiRetryIntervalMs = WIFI_RETRY_INITIAL_MS;
     return;
   }
 
-  Serial.printf("Connecting to WiFi %s", WIFI_SSID);
-  WiFiClass::mode(WIFI_STA);
+  if (wifiConnectAttempted &&
+      now - lastWifiAttemptAt < wifiRetryIntervalMs) {
+    return;
+  }
+
+  wifiConnectAttempted = true;
+  lastWifiAttemptAt = now;
+  Serial.printf("Connecting to WiFi %s...\n\r", WIFI_SSID);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  while (WiFiClass::status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print('.');
-  }
-
-  Serial.println(" connected");
+  wifiRetryIntervalMs =
+      nextRetryInterval(wifiRetryIntervalMs, WIFI_RETRY_MAX_MS);
 }
 
-void syncClock() {
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-  Serial.print("Synchronizing clock");
-
-  std::time_t now = std::time(nullptr);
-  while (now < 1700000000) {
-    delay(500);
-    Serial.print('.');
-    now = std::time(nullptr);
-  }
-
-  Serial.println(" synchronized");
-}
-
-void connectMqtt() {
-  while (!mqttClient.connected()) {
-    Serial.print("Connecting to AWS IoT...");
-
-    if (mqttClient.connect(MQTT_CLIENT_ID)) {
-      Serial.println(" connected");
-      return;
+bool syncClock() {
+  if (std::time(nullptr) >= MIN_VALID_EPOCH) {
+    if (!clockSynchronized) {
+      clockSynchronized = true;
+      Serial.println("Clock synchronized");
     }
-
-    Serial.printf(" failed, state=%d; retrying\n\r", mqttClient.state());
-    delay(2000);
+    return true;
   }
+
+  if (!clockSyncStarted && WiFiClass::status() == WL_CONNECTED) {
+    clockSyncStarted = true;
+    Serial.println("Synchronizing clock...");
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  }
+
+  return false;
+}
+
+void connectMqtt(unsigned long now) {
+  if (mqttClient.connected() || WiFiClass::status() != WL_CONNECTED ||
+      !syncClock()) {
+    return;
+  }
+
+  if (mqttConnectAttempted &&
+      now - lastMqttAttemptAt < mqttRetryIntervalMs) {
+    return;
+  }
+
+  mqttConnectAttempted = true;
+  lastMqttAttemptAt = now;
+  Serial.print("Connecting to AWS IoT...");
+
+  if (mqttClient.connect(MQTT_CLIENT_ID)) {
+    mqttRetryIntervalMs = MQTT_RETRY_INITIAL_MS;
+    Serial.println(" connected");
+    return;
+  }
+
+  mqttRetryIntervalMs =
+      nextRetryInterval(mqttRetryIntervalMs, MQTT_RETRY_MAX_MS);
+  Serial.printf(" failed, state=%d; retrying later\n\r", mqttClient.state());
 }
 
 void publishTemperature() {
@@ -89,27 +126,34 @@ void setup() {
   Serial.println("start");
   dht.begin();
 
-  connectWifi();
-  syncClock();
+  WiFiClass::mode(WIFI_STA);
 
   tlsClient.setCACert(AWS_ROOT_CA);
   tlsClient.setCertificate(AWS_DEVICE_CERT);
   tlsClient.setPrivateKey(AWS_PRIVATE_KEY);
+  tlsClient.setHandshakeTimeout(NETWORK_TIMEOUT_SECONDS);
+  tlsClient.setTimeout(NETWORK_TIMEOUT_SECONDS);
 
   mqttClient.setServer(AWS_IOT_ENDPOINT, MQTT_PORT);
-  connectMqtt();
+  mqttClient.setSocketTimeout(NETWORK_TIMEOUT_SECONDS);
+  connectWifi(millis());
 
   lastPublishAt = millis() - PUBLISH_INTERVAL_MS;
 }
 
 void loop() {
-  connectWifi();
-  connectMqtt();
-  mqttClient.loop();
-
   const unsigned long now = millis();
-  if (now - lastPublishAt >= PUBLISH_INTERVAL_MS) {
-    lastPublishAt = now;
-    publishTemperature();
+  connectWifi(now);
+  connectMqtt(now);
+
+  if (mqttClient.connected()) {
+    mqttClient.loop();
+
+    if (now - lastPublishAt >= PUBLISH_INTERVAL_MS) {
+      lastPublishAt = now;
+      publishTemperature();
+    }
   }
+
+  delay(LOOP_DELAY_MS);
 }
