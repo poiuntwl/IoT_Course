@@ -12,9 +12,9 @@ constexpr uint8_t DHT_PIN = 15;
 constexpr unsigned long PUBLISH_INTERVAL_MS = 30000;
 constexpr uint16_t MQTT_PORT = 8883;
 
-constexpr char MQTT_CLIENT_ID[] = "volodya-3cf39f28-7a18-474c-bd57-f50d7be3f37a";
+constexpr char MQTT_CLIENT_ID[] = "esp32-volodya";
 constexpr char MQTT_TOPIC[] =
-    "iot-course/volodya-3cf39f28-7a18-474c-bd57-f50d7be3f37a/sensors/data";
+    "iot-course/volodya/sensors/data";
 
 DHT dht(DHT_PIN, DHT22);
 WiFiClientSecure tlsClient;
