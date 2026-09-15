@@ -3,7 +3,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-#include <time.h>
+#include <ctime>
 
 #include "secrets.h"
 
@@ -12,8 +12,8 @@ constexpr uint8_t DHT_PIN = 15;
 constexpr unsigned long PUBLISH_INTERVAL_MS = 30000;
 constexpr uint16_t MQTT_PORT = 8883;
 
-const char MQTT_CLIENT_ID[] = "volodya-3cf39f28-7a18-474c-bd57-f50d7be3f37a";
-const char MQTT_TOPIC[] =
+constexpr char MQTT_CLIENT_ID[] = "volodya-3cf39f28-7a18-474c-bd57-f50d7be3f37a";
+constexpr char MQTT_TOPIC[] =
     "iot-course/volodya-3cf39f28-7a18-474c-bd57-f50d7be3f37a/sensors/data";
 
 DHT dht(DHT_PIN, DHT22);
@@ -22,15 +22,15 @@ PubSubClient mqttClient(tlsClient);
 unsigned long lastPublishAt = 0;
 
 void connectWifi() {
-  if (WiFi.status() == WL_CONNECTED) {
+  if (WiFiClass::status() == WL_CONNECTED) {
     return;
   }
 
   Serial.printf("Connecting to WiFi %s", WIFI_SSID);
-  WiFi.mode(WIFI_STA);
+  WiFiClass::mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFiClass::status() != WL_CONNECTED) {
     delay(500);
     Serial.print('.');
   }
@@ -42,11 +42,11 @@ void syncClock() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   Serial.print("Synchronizing clock");
 
-  time_t now = time(nullptr);
+  std::time_t now = std::time(nullptr);
   while (now < 1700000000) {
     delay(500);
     Serial.print('.');
-    now = time(nullptr);
+    now = std::time(nullptr);
   }
 
   Serial.println(" synchronized");
