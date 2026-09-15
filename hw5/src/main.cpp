@@ -61,7 +61,7 @@ void connectMqtt() {
       return;
     }
 
-    Serial.printf(" failed, state=%d; retrying\n", mqttClient.state());
+    Serial.printf(" failed, state=%d; retrying\n\r", mqttClient.state());
     delay(2000);
   }
 }
@@ -77,7 +77,7 @@ void publishTemperature() {
   snprintf(payload, sizeof(payload), "{\"temperature\":%.1f}", temperature);
 
   if (mqttClient.publish(MQTT_TOPIC, payload)) {
-    Serial.printf("Published %s -> %s\n", MQTT_TOPIC, payload);
+    Serial.printf("Published %s -> %s\n\r", MQTT_TOPIC, payload);
   } else {
     Serial.println("MQTT publish failed");
   }
