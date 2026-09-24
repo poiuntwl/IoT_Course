@@ -2,10 +2,12 @@ import json
 import os
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
 import boto3
 from boto3.dynamodb.conditions import Attr
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel
 
@@ -14,6 +16,7 @@ os.environ.setdefault("AWS_PROFILE", "fastapi-backend")
 AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 SENSOR_TABLE_NAME = os.getenv("SENSOR_TABLE_NAME", "iot_course_sensor_data")
 LED_COMMAND_TOPIC = "iot-course/volodya/commands/led"
+CONTROL_PAGE = Path(__file__).with_name("index.html")
 
 
 class LedCommand(BaseModel):
@@ -63,6 +66,11 @@ def _scan_sensor_items(min_sample_time=None):
             return items
 
         scan_args["ExclusiveStartKey"] = last_key
+
+@app.get("/")
+def get_control_page():
+    return FileResponse(CONTROL_PAGE)
+
 
 @app.get("/sensors/latest")
 def get_sensors_latest():
