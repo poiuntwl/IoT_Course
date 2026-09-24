@@ -6,12 +6,19 @@ from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Attr
 from fastapi import FastAPI, HTTPException, Query
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
+from pydantic import BaseModel
 
 os.environ.setdefault("AWS_PROFILE", "fastapi-backend")
 
 AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 SENSOR_TABLE_NAME = os.getenv("SENSOR_TABLE_NAME", "iot_course_sensor_data")
+LED_COMMAND_TOPIC = "iot-course/volodya/commands/led"
+
+
+class LedCommand(BaseModel):
+    state: str
+
 
 app = FastAPI()
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
@@ -93,12 +100,26 @@ def get_sensors_history(minutes: int = Query(default=30, gt=0)):
 
 
 @app.post("/actuators/led")
-async def post_actuators_led():
-    iot.publish(
-        topic="iot-course/volodya/actuators/led",
-        qos=1,
-        payload=json.dumps({
-            "state": "on"
-        })
-    )
-    return {"Hello": "World"}
+def post_actuators_led(command: LedCommand):
+    state = command.state.strip().lower()
+    if state not in {"on", "off"}:
+        raise HTTPException(
+            status_code=400,
+            detail="LED state must be 'on' or 'off'",
+        )
+
+    payload = json.dumps({"action": "set", "value": state}).encode("utf-8")
+
+    try:
+        iot.publish(
+            topic=LED_COMMAND_TOPIC,
+            qos=1,
+            payload=payload,
+        )
+    except (BotoCoreError, ClientError) as error:
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to publish LED command to AWS IoT",
+        ) from error
+
+    return {"status": "published", "state": state}
