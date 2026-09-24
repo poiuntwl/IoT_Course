@@ -1,55 +1,95 @@
-import os
-
-from fastapi import FastAPI
-import boto3
 import json
-from datetime import datetime, timezone, timedelta
+import os
+from datetime import datetime, timezone
+from decimal import Decimal
 
-os.environ["AWS_PROFILE"] = "fastapi-backend"
+import boto3
+from boto3.dynamodb.conditions import Attr
+from fastapi import FastAPI, HTTPException, Query
+from botocore.exceptions import ClientError
+
+os.environ.setdefault("AWS_PROFILE", "fastapi-backend")
+
+AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
+SENSOR_TABLE_NAME = os.getenv("SENSOR_TABLE_NAME", "iot_course_sensor_data")
 
 app = FastAPI()
-iot = boto3.client("iot-data")
+dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+sensor_table = dynamodb.Table(SENSOR_TABLE_NAME)
+iot = boto3.client("iot-data", region_name=AWS_REGION)
+
+
+def _json_value(value):
+    if isinstance(value, Decimal):
+        return int(value) if value % 1 == 0 else float(value)
+    if isinstance(value, dict):
+        return {key: _json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_value(item) for item in value]
+    return value
+
+
+def _sensor_response(item):
+    sample_time = int(item["sample_time"])
+    device_data = _json_value(item.get("device_data", {}))
+
+    return {
+        "timestamp": datetime.fromtimestamp(
+            sample_time / 1000, tz=timezone.utc
+        ).isoformat(),
+        **device_data,
+    }
+
+
+def _scan_sensor_items(min_sample_time=None):
+    scan_args = {}
+    if min_sample_time is not None:
+        scan_args["FilterExpression"] = Attr("sample_time").gte(min_sample_time)
+
+    items = []
+    while True:
+        response = sensor_table.scan(**scan_args)
+        items.extend(response.get("Items", []))
+
+        last_key = response.get("LastEvaluatedKey")
+        if not last_key:
+            return items
+
+        scan_args["ExclusiveStartKey"] = last_key
 
 @app.get("/sensors/latest")
-async def get_sensors_latest():
-    return {
-        "timestamp": str(datetime.now(timezone.utc)),
-        "humidity": 73
-    }
+def get_sensors_latest():
+    try:
+        items = _scan_sensor_items()
+    except ClientError as error:
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to read sensor data from DynamoDB",
+        ) from error
+
+    if not items:
+        raise HTTPException(status_code=404, detail="No sensor data found")
+
+    latest = max(items, key=lambda item: int(item["sample_time"]))
+    return _sensor_response(latest)
 
 
 @app.get("/sensors/history")
-async def get_sensors_history(minutes: int = 30):
-    return [
-    {
-        "timestamp": datetime.now(timezone.utc),
-        "temperature": 22.8
-    },
-    {
-        "timestamp": datetime.now(timezone.utc) - timedelta(minutes=5),
-        "temperature": 22.6
-    },
-    {
-        "timestamp": datetime.now(timezone.utc) - timedelta(minutes=10),
-        "temperature": 22.3
-    },
-    {
-        "timestamp": datetime.now(timezone.utc) - timedelta(minutes=15),
-        "temperature": 22.1
-    },
-    {
-        "timestamp": datetime.now(timezone.utc) - timedelta(minutes=20),
-        "temperature": 21.9
-    },
-    {
-        "timestamp": datetime.now(timezone.utc) - timedelta(minutes=25),
-        "temperature": 21.7
-    },
-    {
-        "timestamp": datetime.now(timezone.utc) - timedelta(minutes=30),
-        "temperature": 21.5
-    }
-]
+def get_sensors_history(minutes: int = Query(default=30, gt=0)):
+    cutoff_ms = int(
+        (datetime.now(timezone.utc).timestamp() - minutes * 60) * 1000
+    )
+
+    try:
+        items = _scan_sensor_items(min_sample_time=cutoff_ms)
+    except ClientError as error:
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to read sensor data from DynamoDB",
+        ) from error
+
+    items.sort(key=lambda item: int(item["sample_time"]))
+    return [_sensor_response(item) for item in items]
 
 
 @app.post("/actuators/led")
