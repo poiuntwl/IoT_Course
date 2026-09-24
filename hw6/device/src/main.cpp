@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <DHT.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -9,6 +10,8 @@
 
 namespace {
 constexpr uint8_t LED_PIN = 2;
+constexpr uint8_t SENSOR_PIN = 15;
+constexpr uint8_t SENSOR_TYPE = DHT22;
 constexpr uint16_t MQTT_PORT = 8883;
 constexpr unsigned long WIFI_RETRY_INITIAL_MS = 2000;
 constexpr unsigned long WIFI_RETRY_MAX_MS = 30000;
@@ -16,6 +19,7 @@ constexpr unsigned long MQTT_RETRY_INITIAL_MS = 2000;
 constexpr unsigned long MQTT_RETRY_MAX_MS = 30000;
 constexpr unsigned long CLOCK_SYNC_TIMEOUT_MS = 10000;
 constexpr unsigned long CLOCK_RETRY_MS = 30000;
+constexpr unsigned long SENSOR_PUBLISH_INTERVAL_MS = 5000;
 constexpr unsigned long NETWORK_TIMEOUT_SECONDS = 10;
 constexpr std::time_t MIN_VALID_EPOCH = 1700000000;
 
@@ -23,10 +27,12 @@ constexpr char MQTT_CLIENT_ID[] = "esp32-volodya";
 constexpr char AWS_IOT_ENDPOINT[] =
     "a3uy4feb9m7i98-ats.iot.eu-central-1.amazonaws.com";
 constexpr char LED_COMMAND_TOPIC[] = "iot-course/volodya/commands/led";
+constexpr char SENSOR_TOPIC[] = "iot-course/volodya/sensors/data";
 constexpr char EVENTS_TOPIC[] = "iot-course/volodya/events";
 
 WiFiClientSecure tlsClient;
 PubSubClient mqttClient(tlsClient);
+DHT dht(SENSOR_PIN, SENSOR_TYPE);
 
 unsigned long lastWifiAttemptAt = 0;
 unsigned long lastMqttAttemptAt = 0;
@@ -45,6 +51,7 @@ bool ledCommandPending = false;
 bool pendingLedOn = false;
 bool eventPending = false;
 bool eventLedOn = false;
+unsigned long lastSensorPublishAt = 0;
 
 unsigned long nextRetryInterval(unsigned long current, unsigned long maximum) {
   return current >= maximum / 2 ? maximum : current * 2;
@@ -225,7 +232,7 @@ void publishPendingEvent() {
   snprintf(
       payload,
       sizeof(payload),
-      "{\"action\":\"set\",\"value\":\"%s\",\"status\":\"applied\"}",
+      "{\"event\":\"led_changed\",\"value\":\"%s\"}",
       eventLedOn ? "on" : "off"
   );
 
@@ -240,12 +247,54 @@ void publishPendingEvent() {
   Serial.print(" -> ");
   Serial.println(payload);
 }
+
+void publishSensorTelemetry(unsigned long now) {
+  if (!mqttClient.connected() ||
+      (lastSensorPublishAt != 0 &&
+       now - lastSensorPublishAt < SENSOR_PUBLISH_INTERVAL_MS)) {
+    return;
+  }
+
+  lastSensorPublishAt = now;
+
+  const float temperature = dht.readTemperature();
+  const float humidity = dht.readHumidity();
+  if (isnan(temperature) || isnan(humidity)) {
+    Serial.println("DHT22 sensor read failed");
+    return;
+  }
+
+  char payload[96];
+  const int payloadLength = snprintf(
+      payload,
+      sizeof(payload),
+      "{\"temperature\":%.1f,\"humidity\":%.1f}",
+      temperature,
+      humidity
+  );
+  if (payloadLength < 0 || payloadLength >= static_cast<int>(sizeof(payload))) {
+    Serial.println("Sensor payload is too large");
+    return;
+  }
+
+  if (!mqttClient.publish(SENSOR_TOPIC, payload)) {
+    Serial.println("Sensor telemetry publish failed");
+    return;
+  }
+
+  Serial.print("Published ");
+  Serial.print(SENSOR_TOPIC);
+  Serial.print(" -> ");
+  Serial.println(payload);
+}
+
 }  // namespace
 
 void setup() {
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
+  dht.begin();
 
   WiFi.mode(WIFI_STA);
 
@@ -269,6 +318,7 @@ void loop() {
 
   if (mqttClient.connected()) {
     mqttClient.loop();
+    publishSensorTelemetry(now);
     applyPendingLedCommand();
     publishPendingEvent();
   }
