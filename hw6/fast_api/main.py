@@ -44,10 +44,10 @@ def _sensor_response(item):
     device_data = _json_value(item.get("device_data", {}))
 
     return {
+        **device_data,
         "timestamp": datetime.fromtimestamp(
             sample_time / 1000, tz=timezone.utc
         ).isoformat(),
-        **device_data,
     }
 
 

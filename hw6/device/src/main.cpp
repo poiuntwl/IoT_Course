@@ -49,6 +49,7 @@ unsigned long lastClockAttemptAt = 0;
 
 bool ledCommandPending = false;
 bool pendingLedOn = false;
+bool ledOn = false;
 bool eventPending = false;
 bool eventLedOn = false;
 unsigned long lastSensorPublishAt = 0;
@@ -214,13 +215,20 @@ void applyPendingLedCommand() {
   }
 
   ledCommandPending = false;
-  digitalWrite(LED_PIN, pendingLedOn ? HIGH : LOW);
+  if (ledOn == pendingLedOn) {
+    Serial.print("LED already ");
+    Serial.println(ledOn ? "on" : "off");
+    return;
+  }
 
-  eventLedOn = pendingLedOn;
+  ledOn = pendingLedOn;
+  digitalWrite(LED_PIN, ledOn ? HIGH : LOW);
+
+  eventLedOn = ledOn;
   eventPending = true;
 
   Serial.print("LED ");
-  Serial.println(pendingLedOn ? "on" : "off");
+  Serial.println(ledOn ? "on" : "off");
 }
 
 void publishPendingEvent() {
@@ -264,13 +272,17 @@ void publishSensorTelemetry(unsigned long now) {
     return;
   }
 
-  char payload[96];
+  const std::time_t measurementTime = std::time(nullptr);
+  char payload[160];
   const int payloadLength = snprintf(
       payload,
       sizeof(payload),
-      "{\"temperature\":%.1f,\"humidity\":%.1f}",
+      "{\"device_id\":\"%s\",\"temperature\":%.1f,\"humidity\":%.1f,"
+      "\"timestamp\":%lld}",
+      MQTT_CLIENT_ID,
       temperature,
-      humidity
+      humidity,
+      static_cast<long long>(measurementTime)
   );
   if (payloadLength < 0 || payloadLength >= static_cast<int>(sizeof(payload))) {
     Serial.println("Sensor payload is too large");
